@@ -4,7 +4,7 @@
 #define ERMIRY_VERSION			"0.1"
 #define ERMIRY_VERSION_NAME		"Version 0.1"
 #define ERMIRY_VERSION_DATE		"07/08/2021"
-#define ERMIRY_VERSION_TIME		"22:23 CST"
+#define ERMIRY_VERSION_TIME		"23:13 CST"
 #define ERMIRY_VERSION_AUTHOR	"Erick Salas"
 
 // print full worker version information
