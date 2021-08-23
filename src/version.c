@@ -7,17 +7,17 @@ void worker_version_print_full (void) {
 
 	cerver_log_both (
 		LOG_TYPE_NONE, LOG_TYPE_NONE,
-		"\nWorker Service Version: %s", ERMIRY_VERSION_NAME
+		"\nWorker Service Version: %s", SERVICE_VERSION_NAME
 	);
 
 	cerver_log_both (
 		LOG_TYPE_NONE, LOG_TYPE_NONE,
-		"Release Date & time: %s - %s", ERMIRY_VERSION_DATE, ERMIRY_VERSION_TIME
+		"Release Date & time: %s - %s", SERVICE_VERSION_DATE, SERVICE_VERSION_TIME
 	);
 
 	cerver_log_both (
 		LOG_TYPE_NONE, LOG_TYPE_NONE,
-		"Author: %s\n", ERMIRY_VERSION_AUTHOR
+		"Author: %s\n", SERVICE_VERSION_AUTHOR
 	);
 
 }
@@ -27,7 +27,7 @@ void worker_version_print_version_id (void) {
 
 	cerver_log_both (
 		LOG_TYPE_NONE, LOG_TYPE_NONE,
-		"\nWorker Service Version ID: %s\n", ERMIRY_VERSION
+		"\nWorker Service Version ID: %s\n", SERVICE_VERSION
 	);
 
 }
@@ -37,7 +37,7 @@ void worker_version_print_version_name (void) {
 
 	cerver_log_both (
 		LOG_TYPE_NONE, LOG_TYPE_NONE,
-		"\nWorker Service Version: %s\n", ERMIRY_VERSION_NAME
+		"\nWorker Service Version: %s\n", SERVICE_VERSION_NAME
 	);
 
 }
