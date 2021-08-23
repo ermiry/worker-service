@@ -14,10 +14,11 @@
 #include <cerver/utils/log.h>
 #include <cerver/utils/utils.h>
 
-#include "ermiry.h"
+#include "service.h"
 #include "version.h"
 
 #include "routes/service.h"
+#include "routes/transactions.h"
 
 static Cerver *worker_service = NULL;
 
@@ -31,7 +32,7 @@ void end (int dummy) {
 		cerver_teardown (worker_service);
 	}
 
-	(void) ermiry_end ();
+	(void) service_end ();
 
 	cerver_end ();
 
@@ -50,6 +51,27 @@ static void worker_set_routes (HttpCerver *http_cerver) {
 	// GET api/worker/version
 	HttpRoute *worker_version_route = http_route_create (REQUEST_METHOD_GET, "version", worker_version_handler);
 	http_route_child_add (worker_route, worker_version_route);
+
+	/*** transactions ***/
+
+	// GET /api/service/transactions
+	HttpRoute *transactions_route = http_route_create (REQUEST_METHOD_GET, "transactions", service_transactions_handler);
+	http_route_child_add (worker_route, transactions_route);
+
+	// POST /api/service/transactions
+	http_route_set_handler (transactions_route, REQUEST_METHOD_POST, service_transaction_create_handler);
+
+	// GET /api/service/transactions/:id/info
+	HttpRoute *trans_info_route = http_route_create (REQUEST_METHOD_GET, "transactions/:id/info", service_transaction_get_handler);
+	http_route_child_add (worker_route, trans_info_route);
+
+	// PUT /api/service/transactions/:id/update
+	HttpRoute *trans_update_route = http_route_create (REQUEST_METHOD_PUT, "transactions/:id/update", service_transaction_update_handler);
+	http_route_child_add (worker_route, trans_update_route);
+
+	// DELETE /api/service/transactions/:id/remove
+	HttpRoute *trans_delete_route = http_route_create (REQUEST_METHOD_DELETE, "transactions/:id/remove", service_transaction_delete_handler);
+	http_route_child_add (worker_route, trans_delete_route);
 
 }
 
@@ -83,7 +105,7 @@ static void start (void) {
 		if (cerver_start (worker_service)) {
 			cerver_log_error (
 				"Failed to start %s!",
-				worker_service->info->name->str
+				worker_service->info->name
 			);
 
 			cerver_delete (worker_service);
@@ -115,15 +137,15 @@ int main (int argc, char const **argv) {
 
 	worker_version_print_full ();
 
-	if (!ermiry_init ()) {
+	if (!service_init ()) {
 		start ();
 	}
 
 	else {
-		cerver_log_error ("Failed to init ermiry!");
+		cerver_log_error ("Failed to init service!");
 	}
 
-	(void) ermiry_end ();
+	(void) service_end ();
 
 	cerver_end ();
 
