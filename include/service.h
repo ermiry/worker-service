@@ -1,5 +1,5 @@
-#ifndef _ERMIRY_H_
-#define _ERMIRY_H_
+#ifndef _SERVICE_H_
+#define _SERVICE_H_
 
 #include "runtime.h"
 
@@ -13,10 +13,10 @@ extern unsigned int CERVER_RECEIVE_BUFFER_SIZE;
 extern unsigned int CERVER_TH_THREADS;
 extern unsigned int CERVER_CONNECTION_QUEUE;
 
-// inits ermiry main values
-extern unsigned int ermiry_init (void);
+// inits service main values
+extern unsigned int service_init (void);
 
-// ends ermiry main values
-extern unsigned int ermiry_end (void);
+// ends service main values
+extern unsigned int service_end (void);
 
 #endif

@@ -9,7 +9,7 @@
 #include <cerver/utils/log.h>
 #include <cerver/utils/utils.h>
 
-#include "ermiry.h"
+#include "service.h"
 #include "runtime.h"
 #include "version.h"
 
@@ -23,7 +23,7 @@ unsigned int CERVER_RECEIVE_BUFFER_SIZE = CERVER_DEFAULT_RECEIVE_BUFFER_SIZE;
 unsigned int CERVER_TH_THREADS = CERVER_DEFAULT_POOL_THREADS;
 unsigned int CERVER_CONNECTION_QUEUE = CERVER_DEFAULT_CONNECTION_QUEUE;
 
-static void ermiry_env_get_runtime (void) {
+static void service_env_get_runtime (void) {
 	
 	char *runtime_env = getenv ("RUNTIME");
 	if (runtime_env) {
@@ -39,7 +39,7 @@ static void ermiry_env_get_runtime (void) {
 
 }
 
-static unsigned int ermiry_env_get_port (void) {
+static unsigned int service_env_get_port (void) {
 	
 	unsigned int retval = 1;
 
@@ -58,7 +58,7 @@ static unsigned int ermiry_env_get_port (void) {
 
 }
 
-static void ermiry_env_get_cerver_receive_buffer_size (void) {
+static void service_env_get_cerver_receive_buffer_size (void) {
 
 	char *buffer_size = getenv ("CERVER_RECEIVE_BUFFER_SIZE");
 	if (buffer_size) {
@@ -76,7 +76,7 @@ static void ermiry_env_get_cerver_receive_buffer_size (void) {
 	}
 }
 
-static void ermiry_env_get_cerver_th_threads (void) {
+static void service_env_get_cerver_th_threads (void) {
 
 	char *th_threads = getenv ("CERVER_TH_THREADS");
 	if (th_threads) {
@@ -93,7 +93,7 @@ static void ermiry_env_get_cerver_th_threads (void) {
 
 }
 
-static void ermiry_env_get_cerver_connection_queue (void) {
+static void service_env_get_cerver_connection_queue (void) {
 
 	char *connection_queue = getenv ("CERVER_CONNECTION_QUEUE");
 	if (connection_queue) {
@@ -110,41 +110,41 @@ static void ermiry_env_get_cerver_connection_queue (void) {
 
 }
 
-static unsigned int ermiry_init_env (void) {
+static unsigned int service_init_env (void) {
 
 	unsigned int errors = 0;
 
-	ermiry_env_get_runtime ();
+	service_env_get_runtime ();
 
-	errors |= ermiry_env_get_port ();
+	errors |= service_env_get_port ();
 
-	ermiry_env_get_cerver_receive_buffer_size ();
+	service_env_get_cerver_receive_buffer_size ();
 
-	ermiry_env_get_cerver_th_threads ();
+	service_env_get_cerver_th_threads ();
 
-	ermiry_env_get_cerver_connection_queue ();
+	service_env_get_cerver_connection_queue ();
 
 	return errors;
 
 }
 
-// inits ermiry main values
-unsigned int ermiry_init (void) {
+// inits service main values
+unsigned int service_init (void) {
 
 	unsigned int errors = 0;
 
-	if (!ermiry_init_env ()) {
-		errors |= ermiry_service_init ();
+	if (!service_init_env ()) {
+		errors |= worker_service_init ();
 	}
 
 	return errors;  
 
 }
 
-// ends ermiry main values
-unsigned int ermiry_end (void) {
+// ends service main values
+unsigned int service_end (void) {
 
-	ermiry_service_end ();
+	worker_service_end ();
 
 	return 0;
 
