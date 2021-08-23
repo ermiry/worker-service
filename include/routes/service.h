@@ -1,5 +1,5 @@
-#ifndef _ERMIRY_ROUTES_SERVICE_H_
-#define _ERMIRY_ROUTES_SERVICE_H_
+#ifndef _SERVICE_ROUTES_SERVICE_H_
+#define _SERVICE_ROUTES_SERVICE_H_
 
 struct _HttpReceive;
 struct _HttpRequest;

@@ -10,6 +10,8 @@
 
 #define VERSION_BUFFER_SIZE		64
 
+HttpResponse *missing_values = NULL;
+
 HttpResponse *worker_works = NULL;
 HttpResponse *current_version = NULL;
 
@@ -19,6 +21,10 @@ unsigned int worker_service_init (void) {
 
 	unsigned int retval = 1;
 
+	missing_values = http_response_json_key_value (
+		HTTP_STATUS_BAD_REQUEST, "error", "Missing values!"
+	);
+
 	worker_works = http_response_json_key_value (
 		HTTP_STATUS_OK, "msg", "Worker service works!"
 	);
@@ -27,7 +33,7 @@ unsigned int worker_service_init (void) {
 	(void) snprintf (
 		version, VERSION_BUFFER_SIZE - 1,
 		"%s - %s",
-		ERMIRY_VERSION_NAME, ERMIRY_VERSION_DATE
+		SERVICE_VERSION_NAME, SERVICE_VERSION_DATE
 	);
 
 	current_version = http_response_json_key_value (
@@ -39,7 +45,8 @@ unsigned int worker_service_init (void) {
 	);
 
 	if (
-		worker_works && current_version
+		missing_values
+		&& worker_works && current_version
 		&& catch_all
 	) retval = 0;
 
@@ -48,6 +55,8 @@ unsigned int worker_service_init (void) {
 }
 
 void worker_service_end (void) {
+
+	http_response_delete (missing_values);
 
 	http_response_delete (worker_works);
 	http_response_delete (current_version);
