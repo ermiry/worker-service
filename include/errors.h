@@ -1,6 +1,8 @@
 #ifndef _SERVICE_ERRORS_H_
 #define _SERVICE_ERRORS_H_
 
+struct _HttpReceive;
+
 #define SERVICE_ERROR_MAP(XX)						\
 	XX(0,	NONE, 				None)				\
 	XX(1,	BAD_REQUEST, 		Bad Request)		\
