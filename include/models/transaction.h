@@ -11,6 +11,7 @@
 #define	TRANSACTION_ID_SIZE				32
 #define TRANSACTION_TITLE_SIZE			512
 #define TRANSACTION_DESCRIPTION_SIZE	1024
+#define TRANSACTION_RESULT_SIZE			128
 
 extern unsigned int transactions_model_init (void);
 
@@ -51,6 +52,14 @@ typedef struct Transaction {
 	// when the transaction was made
 	time_t date;
 
+	char result[TRANSACTION_RESULT_SIZE];
+
+	double start_time;		// when the transaction was uploaded
+	double worker_time;		// when pushed to worker queue
+	double waiting_time;	// how long it waited on the queue
+	double process_time;	// how long the actual work took
+	double complete_time;	// from the start to the end of the work
+
 } Transaction;
 
 extern void *transaction_new (void);
@@ -89,6 +98,14 @@ extern unsigned int transaction_insert_one (
 
 extern unsigned int transaction_update_one (
 	const Transaction *transaction
+);
+
+extern unsigned int transaction_update_worker_time (
+	const bson_oid_t *trans_oid, const double worker_time
+);
+
+extern unsigned int transaction_update_result (
+	const Transaction *trans
 );
 
 extern unsigned int transaction_delete_one_by_oid (

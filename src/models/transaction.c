@@ -182,6 +182,14 @@ static bson_t *transaction_to_bson (const Transaction *trans) {
 
 		(void) bson_append_double (doc, "amount", -1, trans->amount);
 		(void) bson_append_date_time (doc, "date", -1, trans->date * 1000);
+
+		(void) bson_append_utf8 (doc, "result", -1, trans->result, -1);
+
+		(void) bson_append_double (doc, "start_time", -1, trans->start_time);
+		(void) bson_append_double (doc, "worker_time", -1, trans->worker_time);
+		(void) bson_append_double (doc, "waiting_time", -1, trans->waiting_time);
+		(void) bson_append_double (doc, "process_time", -1, trans->process_time);
+		(void) bson_append_double (doc, "complete_time", -1, trans->complete_time);
 	}
 
 	return doc;
@@ -258,6 +266,65 @@ unsigned int transaction_update_one (const Transaction *transaction) {
 		transactions_model,
 		transaction_query_oid (&transaction->oid),
 		transaction_update_bson (transaction)
+	);
+
+}
+
+static inline bson_t *transaction_update_worker_time_bson (
+	const double worker_time
+) {
+
+	bson_t *doc = bson_new ();
+	if (doc) {
+		bson_t set_doc = BSON_INITIALIZER;
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		(void) bson_append_double (&set_doc, "worker_time", -1, worker_time);
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
+
+}
+
+unsigned int transaction_update_worker_time (
+	const bson_oid_t *trans_oid, const double worker_time
+) {
+
+	return mongo_update_one (
+		transactions_model,
+		transaction_query_oid (trans_oid),
+		transaction_update_worker_time_bson (worker_time)
+	);
+
+}
+
+static inline bson_t *transaction_update_result_bson (
+	const Transaction *trans
+) {
+
+	bson_t *doc = bson_new ();
+	if (doc) {
+		bson_t set_doc = BSON_INITIALIZER;
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		(void) bson_append_utf8 (&set_doc, "result", -1, trans->result, -1);
+		(void) bson_append_double (&set_doc, "waiting_time", -1, trans->waiting_time);
+		(void) bson_append_double (&set_doc, "process_time", -1, trans->process_time);
+		(void) bson_append_double (&set_doc, "complete_time", -1, trans->complete_time);
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
+
+}
+
+unsigned int transaction_update_result (
+	const Transaction *trans
+) {
+
+	return mongo_update_one (
+		transactions_model,
+		transaction_query_oid (&trans->oid),
+		transaction_update_result_bson (trans)
 	);
 
 }
