@@ -6,6 +6,8 @@
 
 #include <cerver/collections/pool.h>
 
+#include <cerver/timer.h>
+
 #include <cerver/http/response.h>
 #include <cerver/http/json/json.h>
 
@@ -14,7 +16,9 @@
 #include <cmongo/crud.h>
 #include <cmongo/select.h>
 
+#include "data.h"
 #include "errors.h"
+#include "worker.h"
 
 #include "models/transaction.h"
 
@@ -141,6 +145,12 @@ void service_trans_end (void) {
 
 }
 
+Transaction *service_trans_get (void) {
+
+	return (Transaction *) pool_pop (trans_pool);
+
+}
+
 unsigned int service_trans_get_all (
 	char **json, size_t *json_len
 ) {
@@ -153,7 +163,7 @@ unsigned int service_trans_get_all (
 }
 
 Transaction *service_trans_get_by_id (
-	const String *trans_id
+	const char *trans_id
 ) {
 
 	Transaction *trans = NULL;
@@ -161,7 +171,7 @@ Transaction *service_trans_get_by_id (
 	if (trans_id) {
 		trans = (Transaction *) pool_pop (trans_pool);
 		if (trans) {
-			bson_oid_init_from_string (&trans->oid, trans_id->str);
+			bson_oid_init_from_string (&trans->oid, trans_id);
 
 			if (transaction_get_by_oid (
 				trans,
@@ -201,29 +211,25 @@ u8 service_trans_get_by_id_to_json (
 
 }
 
-static Transaction *service_trans_create_actual (
+static void service_trans_create_actual (
+	Transaction *trans,
 	const char *title,
 	const char *description,
 	const double amount
 ) {
 
-	Transaction *trans = (Transaction *) pool_pop (trans_pool);
-	if (trans) {
-		bson_oid_init (&trans->oid, NULL);
-		bson_oid_to_string (&trans->oid, trans->id);
+	bson_oid_init (&trans->oid, NULL);
+	bson_oid_to_string (&trans->oid, trans->id);
 
-		if (title)
-			(void) strncpy (trans->title, title, TRANSACTION_TITLE_SIZE - 1);
+	if (title)
+		(void) strncpy (trans->title, title, TRANSACTION_TITLE_SIZE - 1);
 
-		if (description)
-			(void) strncpy (trans->description, description, TRANSACTION_DESCRIPTION_SIZE - 1);
+	if (description)
+		(void) strncpy (trans->description, description, TRANSACTION_DESCRIPTION_SIZE - 1);
 
-		trans->amount = amount;
+	trans->amount = amount;
 
-		trans->date = time (NULL);
-	}
-
-	return trans;
+	trans->date = time (NULL);
 
 }
 
@@ -265,7 +271,7 @@ static void service_trans_parse_json (
 }
 
 static ServiceError service_trans_create_parse_json (
-	Transaction **trans, const String *request_body
+	Transaction *trans, const String *request_body
 ) {
 
 	ServiceError error = SERVICE_ERROR_NONE;
@@ -283,11 +289,9 @@ static ServiceError service_trans_create_parse_json (
 		);
 
 		if (title) {
-			*trans = service_trans_create_actual (
-				title, description, amount
+			service_trans_create_actual (
+				trans, title, description, amount
 			);
-
-			if (*trans == NULL) error = SERVICE_ERROR_SERVER_ERROR;
 		}
 
 		else {
@@ -310,17 +314,16 @@ static ServiceError service_trans_create_parse_json (
 
 }
 
-ServiceError service_trans_create (
-	const String *request_body
+static ServiceError service_trans_create_internal (
+	const String *request_body, const double start_time,
+	Transaction *trans
 ) {
 
 	ServiceError error = SERVICE_ERROR_NONE;
 
 	if (request_body) {
-		Transaction *trans = NULL;
-
 		error = service_trans_create_parse_json (
-			&trans, request_body
+			trans, request_body
 		);
 
 		if (error == SERVICE_ERROR_NONE) {
@@ -328,15 +331,17 @@ ServiceError service_trans_create (
 			transaction_print (trans);
 			#endif
 
+			trans->start_time = start_time;
+
 			if (!transaction_insert_one (trans)) {
 				cerver_log_success ("Created transaction %s", trans->id);
+
+				(void) worker_current_push (trans);
 			}
 
 			else {
 				error = SERVICE_ERROR_SERVER_ERROR;
 			}
-
-			service_trans_return (trans);
 		}
 	}
 
@@ -346,6 +351,43 @@ ServiceError service_trans_create (
 		#endif
 
 		error = SERVICE_ERROR_BAD_REQUEST;
+	}
+
+	return error;
+
+}
+
+ServiceError service_trans_create (
+	const String *request_body
+) {
+
+	ServiceError error = SERVICE_ERROR_NONE;
+
+	double start_time = timer_get_current_time ();
+
+	service_data_update_trans_count ();
+
+	Transaction *trans = service_trans_get ();
+	if (trans) {
+		error = service_trans_create_internal (
+			request_body, start_time, trans
+		);
+
+		switch (error) {
+			case SERVICE_ERROR_NONE:
+				service_data_update_good_trans_count ();
+				break;
+
+			default: {
+				service_data_update_bad_trans_count ();
+
+				service_trans_return (trans);
+			} break;
+		}
+	}
+
+	else {
+		error = SERVICE_ERROR_SERVER_ERROR;
 	}
 
 	return error;
@@ -403,7 +445,7 @@ ServiceError service_trans_update (
 	ServiceError error = SERVICE_ERROR_NONE;
 
 	if (request_body) {
-		Transaction *trans = service_trans_get_by_id (trans_id);
+		Transaction *trans = service_trans_get_by_id (trans_id->str);
 
 		if (trans) {
 			// get update values

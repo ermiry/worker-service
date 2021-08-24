@@ -3,6 +3,8 @@
 
 #include <bson/bson.h>
 
+#include <cerver/types/string.h>
+
 #include <cerver/collections/pool.h>
 
 #include "errors.h"
@@ -28,12 +30,14 @@ extern unsigned int service_trans_init (void);
 
 extern void service_trans_end (void);
 
+extern Transaction *service_trans_get (void);
+
 extern unsigned int service_trans_get_all (
 	char **json, size_t *json_len
 );
 
 extern Transaction *service_trans_get_by_id (
-	const String *trans_id
+	const char *trans_id
 );
 
 extern u8 service_trans_get_by_id_to_json (
