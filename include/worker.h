@@ -1,6 +1,8 @@
 #ifndef _SERVICE_WORKER_H_
 #define _SERVICE_WORKER_H_
 
+#define WORKER_HASH_INPUT_SIZE		256
+
 struct _HttpCerver;
 
 extern unsigned int worker_current_init (
