@@ -88,31 +88,31 @@ void service_transaction_get_handler (
 	const String *trans_id = request->params[0];
 
 	if (trans_id) {
-	size_t json_len = 0;
-	char *json = NULL;
+		size_t json_len = 0;
+		char *json = NULL;
 
-	if (!service_trans_get_by_id_to_json (
-		trans_id->str,
-		trans_no_user_query_opts,
-		&json, &json_len
-	)) {
-		if (json) {
-			(void) http_response_json_custom_reference_send (
-				http_receive, HTTP_STATUS_OK, json, json_len
-			);
+		if (!service_trans_get_by_id_to_json (
+			trans_id->str,
+			trans_no_user_query_opts,
+			&json, &json_len
+		)) {
+			if (json) {
+				(void) http_response_json_custom_reference_send (
+					http_receive, HTTP_STATUS_OK, json, json_len
+				);
 
-			free (json);
+				free (json);
+			}
+
+			else {
+				(void) http_response_send (server_error, http_receive);
+			}
 		}
 
 		else {
-			(void) http_response_send (server_error, http_receive);
+			(void) http_response_send (no_user_trans, http_receive);
 		}
 	}
-
-	else {
-		(void) http_response_send (no_user_trans, http_receive);
-	}
-}
 
 }
 
