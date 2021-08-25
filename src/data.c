@@ -35,6 +35,7 @@ static ServiceData *service_data_create (void) {
 
 		(void) pthread_mutex_init (&data->trans_waiting_time_mutex, NULL);
 		(void) pthread_mutex_init (&data->trans_process_time_mutex, NULL);
+		(void) pthread_mutex_init (&data->trans_complete_time_mutex, NULL);
 	}
 
 	return data;
@@ -50,6 +51,7 @@ static void service_data_destroy (ServiceData *data) {
 
 		(void) pthread_mutex_destroy (&data->trans_waiting_time_mutex);
 		(void) pthread_mutex_destroy (&data->trans_process_time_mutex);
+		(void) pthread_mutex_destroy (&data->trans_complete_time_mutex);
 
 		free (data);
 	}
@@ -111,6 +113,23 @@ static void service_data_init_process_time (void) {
 
 }
 
+static void service_data_init_complete_time (void) {
+
+	(unsigned int) credis_command (
+		"MSET n_completedes %lu "
+		"min_completed_time %f "
+		"max_completed_time %f "
+		"sum_completed_times %f "
+		"average_completed_time %f",
+		service_data->n_completes,
+		service_data->min_complete_time,
+		service_data->max_complete_time,
+		service_data->sum_complete_times,
+		service_data->average_complete_time
+	);
+
+}
+
 static void service_data_init_current_worker_transaction (void) {
 
 	(unsigned int) credis_command (
@@ -126,6 +145,8 @@ void service_data_init_default_values (void) {
 	service_data_init_waiting_time ();
 
 	service_data_init_process_time ();
+
+	service_data_init_complete_time ();
 
 	service_data_init_current_worker_transaction ();
 
@@ -213,6 +234,24 @@ static void service_data_reset_process_time (void) {
 
 }
 
+static void service_data_reset_complete_time (void) {
+
+	(void) pthread_mutex_lock (&service_data->trans_complete_time_mutex);
+
+	service_data->n_completes = 0;
+
+	service_data->min_complete_time = SERVICE_DATA_MAX;
+
+	service_data->max_complete_time = 0;
+
+	service_data->sum_complete_times = 0;
+
+	service_data->average_complete_time = 0;
+
+	(void) pthread_mutex_unlock (&service_data->trans_complete_time_mutex);
+
+}
+
 void service_data_reset (void) {
 
 	service_data_reset_trans_count ();
@@ -222,6 +261,8 @@ void service_data_reset (void) {
 	service_data_reset_waiting_time ();
 
 	service_data_reset_process_time ();
+
+	service_data_reset_complete_time ();
 
 }
 
@@ -284,6 +325,26 @@ void service_data_restore_process_time (
 	service_data->sum_process_times = sum_process_times;
 
 	service_data->average_process_time = average_process_time;
+
+}
+
+void service_data_restore_complete_time (
+	const size_t n_completes,
+	const double min_complete_time,
+	const double max_complete_time,
+	const double sum_complete_times,
+	const double average_complete_time
+) {
+
+	service_data->n_completes = n_completes;
+
+	service_data->min_complete_time = min_complete_time;
+
+	service_data->max_complete_time = max_complete_time;
+
+	service_data->sum_complete_times = sum_complete_times;
+
+	service_data->average_complete_time = average_complete_time;
 
 }
 
@@ -558,6 +619,46 @@ void service_data_update_process_time (
 
 }
 
+void service_data_update_complete_time (
+	const double complete_time
+) {
+
+	if (complete_time > 0) {
+		(void) pthread_mutex_lock (&service_data->trans_complete_time_mutex);
+
+		service_data->n_completes += 1;
+
+		if (complete_time < service_data->min_complete_time)
+			service_data->min_complete_time = complete_time;
+
+		if (complete_time > service_data->max_complete_time)
+			service_data->max_complete_time = complete_time;
+
+		service_data->sum_complete_times += complete_time;
+		service_data->average_complete_time = (
+			service_data->sum_complete_times / service_data->n_completes
+		);
+
+		if (CONNECT_TO_REDIS) {
+			(void) credis_command (
+				"MSET n_completes %lu "
+				"min_complete_time %f "
+				"max_complete_time %f "
+				"sum_complete_times %f "
+				"average_complete_time %f",
+				service_data->n_completes,
+				service_data->min_complete_time,
+				service_data->max_complete_time,
+				service_data->sum_complete_times,
+				service_data->average_complete_time
+			);
+		}
+
+		(void) pthread_mutex_unlock (&service_data->trans_complete_time_mutex);
+	}
+
+}
+
 #pragma endregion
 
 #pragma region json
@@ -646,6 +747,34 @@ static void service_data_process_time_to_json (json_t *json) {
 
 }
 
+static void service_data_complete_time_to_json (json_t *json) {
+
+	(void) pthread_mutex_lock (&service_data->trans_complete_time_mutex);
+
+	(void) json_object_set_new (
+		json, "n_completes", json_integer ((json_int_t) service_data->n_completes)
+	);
+
+	(void) json_object_set_new (
+		json, "min_complete_time", json_real (service_data->min_complete_time)
+	);
+
+	(void) json_object_set_new (
+		json, "max_complete_time", json_real (service_data->max_complete_time)
+	);
+
+	(void) json_object_set_new (
+		json, "sum_complete_times", json_real (service_data->sum_complete_times)
+	);
+
+	(void) json_object_set_new (
+		json, "average_complete_time", json_real (service_data->average_complete_time)
+	);
+
+	(void) pthread_mutex_unlock (&service_data->trans_complete_time_mutex);
+
+}
+
 char *service_data_to_json (void) {
 
 	char *json_string = NULL;
@@ -657,6 +786,8 @@ char *service_data_to_json (void) {
 		service_data_waiting_time_to_json (json);
 
 		service_data_process_time_to_json (json);
+
+		service_data_complete_time_to_json (json);
 
 		json_string = json_dumps (json, 0);
 

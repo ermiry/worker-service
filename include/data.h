@@ -44,13 +44,13 @@ struct _ServiceData {
 	double average_process_time;
 
 	// total amount of completed works
-	size_t n_completed_processes;
+	size_t n_completes;
 
 	// complete process time
-	double min_complete_process_time;
-	double max_complete_process_time;
-	double sum_complete_process_times;
-	double average_complete_process_time;
+	double min_complete_time;
+	double max_complete_time;
+	double sum_complete_times;
+	double average_complete_time;
 
 	pthread_mutex_t trans_count_mutex;
 
@@ -58,7 +58,7 @@ struct _ServiceData {
 
 	pthread_mutex_t trans_waiting_time_mutex;
 	pthread_mutex_t trans_process_time_mutex;
-	pthread_mutex_t censos_completed_time_mutex;
+	pthread_mutex_t trans_complete_time_mutex;
 
 };
 
@@ -102,6 +102,14 @@ extern void service_data_restore_process_time (
 	const double max_process_time,
 	const double sum_process_times,
 	const double average_process_time
+);
+
+extern void service_data_restore_complete_time (
+	const size_t n_completes,
+	const double min_complete_time,
+	const double max_complete_time,
+	const double sum_complete_times,
+	const double average_complete_time
 );
 
 #pragma endregion
@@ -148,6 +156,10 @@ extern void service_data_update_waiting_time (
 
 extern void service_data_update_process_time (
 	const double process_time
+);
+
+extern void service_data_update_complete_time (
+	const double complete_time
 );
 
 #pragma endregion
