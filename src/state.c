@@ -63,7 +63,7 @@ WorkerState service_state_get_worker_state (void) {
 
 #pragma region init
 
-void gepp_service_state_init_default_values (void) {
+void service_state_init_default_values (void) {
 
 	(void) credis_command (
 		"MSET worker_state %d "
@@ -76,12 +76,12 @@ void gepp_service_state_init_default_values (void) {
 
 }
 
-void gepp_service_state_init (const bool first_time) {
+void service_state_init (const bool first_time) {
 
 	service_state = service_state_create ();
 
 	if (CONNECT_TO_REDIS && first_time) {
-		gepp_service_state_init_default_values ();
+		service_state_init_default_values ();
 	}
 
 }
@@ -90,7 +90,7 @@ void gepp_service_state_init (const bool first_time) {
 
 #pragma region reset
 
-void gepp_service_state_reset (void) {
+void service_state_reset (void) {
 
 	(void) pthread_mutex_lock (&service_state->worker_mutex);
 
@@ -172,7 +172,7 @@ void service_state_update_stop_worker (void) {
 
 #pragma region json
 
-char *gepp_service_state_to_json (void) {
+char *service_state_to_json (void) {
 
 	char *output_string = NULL;
 
@@ -207,7 +207,7 @@ char *gepp_service_state_to_json (void) {
 
 #pragma region end
 
-void gepp_service_state_end (void) {
+void service_state_end (void) {
 
 	service_state_destroy (service_state);
 
