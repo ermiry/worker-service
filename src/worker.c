@@ -19,16 +19,20 @@ static Worker *worker = NULL;
 
 static void worker_handler_method (void *data_ptr);
 
-unsigned int worker_current_init (HttpCerver *http_cerver) {
+unsigned int worker_current_init (void) {
 
 	worker = worker_create ();
 	worker_set_name (worker, "test");
 	worker_set_work (worker, worker_handler_method);
 	worker_set_delete_data (worker, service_trans_return);
 
-	http_cerver_register_admin_worker (http_cerver, worker);
-
 	return worker_start (worker);
+
+}
+
+void worker_current_register (HttpCerver *http_cerver) {
+
+	http_cerver_register_admin_worker (http_cerver, worker);
 
 }
 
@@ -145,7 +149,8 @@ static void worker_handler_method (void *data_ptr) {
 
 	trans->complete_time = complete_time;
 
-	// TODO: update complete process times
+	// update complete process times
+	service_data_update_complete_time (complete_time);
 
 	// update trans values in db
 	(void) transaction_update_result (trans);
