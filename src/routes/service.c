@@ -4,8 +4,8 @@
 
 #include "controllers/service.h"
 
-// GET /api/worker
-void worker_handler (
+// GET /api/service
+void service_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
 ) {
@@ -14,8 +14,8 @@ void worker_handler (
 
 }
 
-// GET /api/worker/version
-void worker_version_handler (
+// GET /api/service/version
+void service_version_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
 ) {
@@ -25,7 +25,7 @@ void worker_version_handler (
 }
 
 // GET *
-void worker_catch_all_handler (
+void service_catch_all_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
 ) {
