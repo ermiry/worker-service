@@ -203,6 +203,53 @@ static void backup_fetch_process_time (void) {
 
 }
 
+static void backup_fetch_complete_time (void) {
+
+	CredisClient *client = credis_client_get ();
+	if (client) {
+		redisReply *reply = (redisReply *) redisCommand (
+			client->redis_context,
+			"MGET n_completes "
+			"min_complete_time "
+			"max_complete_time "
+			"sum_complete_times "
+			"average_complete_time"
+		);
+
+		if (reply) {
+			// cerver_log_debug (
+			// 	"backup_fetch_complete_time () - "
+			// 	"Fetched %lu elements!", reply->elements
+			// );
+			// for (size_t idx = 0; idx < reply->elements; idx++) {
+			// 	(void) printf (
+			// 		"[%lu]: %d - %s\n",
+			// 		idx, reply->element[idx]->type, reply->element[idx]->str
+			// 	);
+			// }
+
+			size_t n_completes = (size_t) atol (reply->element[0]->str);
+			double min_complete_time = atof (reply->element[1]->str);
+			double max_complete_time = atof (reply->element[2]->str);
+			double sum_complete_times = atof (reply->element[3]->str);
+			double average_complete_time = atof (reply->element[4]->str);
+
+			service_data_restore_complete_time (
+				n_completes,
+				min_complete_time,
+				max_complete_time,
+				sum_complete_times,
+				average_complete_time
+			);
+
+			freeReplyObject (reply);
+		}
+
+		credis_client_return (client);
+	}
+
+}
+
 // get all trans in current_trans_in_worker_queue list
 static void backup_fetch_current_trans_in_worker_queue (void) {
 
@@ -274,6 +321,7 @@ void backup_fetch_data_from_cache (void) {
 	/*** times ***/
 	backup_fetch_waiting_time ();
 	backup_fetch_process_time ();
+	backup_fetch_complete_time ();
 
 	cerver_log_debug ("Done fetching state from cache!");
 
