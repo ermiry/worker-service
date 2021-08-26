@@ -14,10 +14,15 @@ MONGOC_INC	:= -I /usr/local/include/libbson-1.0 -I /usr/local/include/libmongoc-
 CMONGO		:= -l cmongo
 CMONGO_INC	:= -I /usr/local/include/cmongo
 
+HIREDIS		:= -l hiredis
+
+CREDIS		:= -l credis
+CREDIS_INC	:= -I /usr/local/include/credis
+
 CERVER		:= -l cerver
 CERVER_INC	:= -I /usr/local/include/cerver
 
-DEVELOPMENT	:= -g -D ERMIRY_DEBUG
+DEVELOPMENT	:= -D SERVICE_DEBUG
 
 DEFINES		:= -D _GNU_SOURCE
 
@@ -64,8 +69,8 @@ endif
 
 CFLAGS += $(COMMON)
 
-LIB         := -L /usr/local/lib $(PTHREAD) $(MATH) $(OPENSSL) $(MONGOC) $(CERVER) $(CMONGO)
-INC         := -I $(INCDIR) -I /usr/local/include $(MONGOC_INC) $(CERVER_INC) $(CMONGO_INC)
+LIB         := -L /usr/local/lib $(PTHREAD) $(MATH) $(OPENSSL) $(MONGOC) $(CERVER) $(CMONGO) $(HIREDIS) $(CREDIS)
+INC         := -I $(INCDIR) -I /usr/local/include $(MONGOC_INC) $(CERVER_INC) $(CMONGO_INC) $(CREDIS_INC)
 INCDEP      := -I $(INCDIR)
 
 SOURCES     := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
