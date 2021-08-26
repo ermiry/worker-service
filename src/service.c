@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+
+#include <unistd.h>
 
 #include <cerver/types/types.h>
 
@@ -11,13 +14,23 @@
 
 #include <cmongo/mongo.h>
 
+#include <credis/redis.h>
+
+#include "backup.h"
+#include "data.h"
 #include "runtime.h"
 #include "service.h"
+#include "state.h"
 #include "version.h"
+#include "worker.h"
 
 #include "models/transaction.h"
 
 #include "controllers/service.h"
+#include "controllers/transactions.h"
+
+bool running = false;
+static bool started = false;
 
 RuntimeType RUNTIME = RUNTIME_TYPE_NONE;
 
@@ -30,6 +43,12 @@ unsigned int CERVER_CONNECTION_QUEUE = CERVER_DEFAULT_CONNECTION_QUEUE;
 static char MONGO_URI[MONGO_URI_SIZE] = { 0 };
 static char MONGO_APP_NAME[MONGO_APP_NAME_SIZE] = { 0 };
 static char MONGO_DB[MONGO_DB_SIZE] = { 0 };
+
+bool CONNECT_TO_REDIS = false;
+static char REAL_REDIS_HOSTNAME[REDIS_HOSTNAME_SIZE] = { 0 };
+const char *REDIS_HOSTNAME = REAL_REDIS_HOSTNAME;
+
+static bool FIRST_TIME = true;
 
 static void service_env_get_runtime (void) {
 	
@@ -187,6 +206,52 @@ static unsigned int service_env_get_mongo_uri (void) {
 
 }
 
+static void service_env_get_connect_to_redis (void) {
+
+	char *connect_to_redis = getenv ("CONNECT_TO_REDIS");
+	if (connect_to_redis) {
+		if (!strcasecmp (connect_to_redis, "TRUE")) {
+			CONNECT_TO_REDIS = true;
+			cerver_log_success ("CONNECT_TO_REDIS -> TRUE");
+		}
+
+		else {
+			CONNECT_TO_REDIS = false;
+			cerver_log_success ("CONNECT_TO_REDIS -> FALSE");
+		}
+	}
+
+	else {
+		cerver_log_warning (
+			"Failed to get CONNECT_TO_REDIS from env - using default FALSE!"
+		);
+	}
+
+}
+
+static unsigned int service_env_get_redis_hostname (void) {
+
+	unsigned int retval = 1;
+
+	char *service_REDIS_HOSTNAME_env = getenv ("REDIS_HOSTNAME");
+	if (service_REDIS_HOSTNAME_env) {
+		(void) strncpy (
+			REAL_REDIS_HOSTNAME,
+			service_REDIS_HOSTNAME_env,
+			REDIS_HOSTNAME_SIZE - 1
+		);
+
+		retval = 0;
+	}
+
+	else {
+		cerver_log_error ("Failed to get REDIS_HOSTNAME from env!");
+	}
+
+	return retval;
+
+}
+
 static unsigned int service_init_env (void) {
 
 	unsigned int errors = 0;
@@ -206,6 +271,10 @@ static unsigned int service_init_env (void) {
 	errors |= service_env_get_mongo_db ();
 
 	errors |= service_env_get_mongo_uri ();
+
+	service_env_get_connect_to_redis ();
+
+	errors |= service_env_get_redis_hostname ();
 
 	return errors;
 
@@ -241,6 +310,50 @@ static unsigned int service_mongo_connect (void) {
 
 }
 
+static unsigned int service_redis_init (void) {
+
+	unsigned int errors = 0;
+
+	if (CONNECT_TO_REDIS) {
+		unsigned int result = 1;
+
+		char *hostname = network_hostname_to_ip (REDIS_HOSTNAME);
+		if (hostname) {
+			credis_set_hostname (hostname);
+
+			if (!credis_init ()) {
+				result = credis_ping_db ();
+
+				// check if the service was up before
+				if (credis_exists_test ()) {
+					cerver_log_success ("First time!");
+
+					FIRST_TIME = true;
+
+					(void) credis_set_test ();
+				}
+
+				else {
+					cerver_log_success ("NOT the first time!");
+
+					FIRST_TIME = false;
+				}
+			}
+			
+			free (hostname);
+		}
+
+		else {
+			cerver_log_error ("Failed to get REDIS_HOSTNAME ip address!");
+		}
+
+		errors = result;
+	}
+
+	return errors;
+
+}
+
 // inits service main values
 unsigned int service_init (void) {
 
@@ -248,11 +361,40 @@ unsigned int service_init (void) {
 
 	if (!service_init_env ()) {
 		if (!service_mongo_connect ()) {
-			unsigned int errors = 0;
+			if (!service_redis_init ()) {
+				unsigned int errors = 0;
 
-			errors |= worker_service_init ();
+				started = true;
 
-			retval = errors;
+				running = true;
+
+				cerver_log_debug ("Initializing service...");
+
+				service_data_init (FIRST_TIME);
+
+				service_state_init (FIRST_TIME);
+
+				// load state from cache
+				if (!FIRST_TIME) {
+					backup_fetch_state_from_cache ();
+				}
+
+				errors |= worker_service_init ();
+
+				errors |= service_trans_init ();
+
+				errors |= worker_current_init ();
+
+				// make sure that worker has initialized
+				(unsigned int) sleep (WORKER_WAIT_TIME);
+
+				// load data from cache
+				if (!FIRST_TIME) {
+					backup_fetch_data_from_cache ();
+				}
+
+				retval = errors;
+			}
 		}
 	}
 
@@ -277,9 +419,21 @@ unsigned int service_end (void) {
 
 	unsigned int errors = 0;
 
+	running = false;
+
+	if (started) {
+		(void) worker_current_end ();
+	}
+
 	errors |= service_mongo_end ();
 
-	worker_service_end ();
+	if (CONNECT_TO_REDIS) {
+		(void) credis_end ();
+	}
+
+	if (started) {
+		worker_service_end ();
+	}
 
 	return errors;
 
