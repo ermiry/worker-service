@@ -29,6 +29,8 @@ static ServiceData *service_data_create (void) {
 
 		data->min_process_time = SERVICE_DATA_MAX;
 
+		data->min_complete_time = SERVICE_DATA_MAX;
+
 		(void) pthread_mutex_init (&data->trans_count_mutex, NULL);
 
 		(void) pthread_mutex_init (&data->worker_trans_mutex, NULL);
@@ -116,11 +118,11 @@ static void service_data_init_process_time (void) {
 static void service_data_init_complete_time (void) {
 
 	(unsigned int) credis_command (
-		"MSET n_completedes %lu "
-		"min_completed_time %f "
-		"max_completed_time %f "
-		"sum_completed_times %f "
-		"average_completed_time %f",
+		"MSET n_completes %lu "
+		"min_complete_time %f "
+		"max_complete_time %f "
+		"sum_complete_times %f "
+		"average_complete_time %f",
 		service_data->n_completes,
 		service_data->min_complete_time,
 		service_data->max_complete_time,
