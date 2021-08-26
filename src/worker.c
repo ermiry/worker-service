@@ -11,6 +11,7 @@
 #include <cerver/utils/sha256.h>
 
 #include "data.h"
+#include "state.h"
 #include "worker.h"
 
 #include "controllers/transactions.h"
@@ -19,6 +20,42 @@ static Worker *worker = NULL;
 
 static void worker_handler_method (void *data_ptr);
 
+static unsigned int worker_current_init_internal (void) {
+
+	unsigned int retval = 1;
+
+	WorkerState worker_state = service_state_get_worker_state ();
+
+	switch (worker_state) {
+		case WORKER_STATE_NONE:
+		case WORKER_STATE_AVAILABLE: {
+			retval = worker_start_with_state (
+				worker, WORKER_STATE_AVAILABLE
+			);
+		} break;
+
+		case WORKER_STATE_STOPPED: {
+			retval = worker_start_with_state (
+				worker, WORKER_STATE_STOPPED
+			);
+		} break;
+
+		default: break;
+	}
+
+	switch (worker_state) {
+		case WORKER_STATE_NONE:
+		case WORKER_STATE_AVAILABLE: {
+			service_state_update_start_worker ();
+		} break;
+
+		default: break;
+	}
+
+	return retval;
+
+}
+
 unsigned int worker_current_init (void) {
 
 	worker = worker_create ();
@@ -26,7 +63,7 @@ unsigned int worker_current_init (void) {
 	worker_set_work (worker, worker_handler_method);
 	worker_set_delete_data (worker, service_trans_return);
 
-	return worker_start (worker);
+	return worker_current_init_internal ();
 
 }
 
@@ -38,19 +75,41 @@ void worker_current_register (HttpCerver *http_cerver) {
 
 unsigned int worker_current_end (void) {
 
-	return worker_end (worker);
+	unsigned int retval = 1;
+
+	retval = worker_end (worker);
+
+	worker_delete (worker);
+
+	return retval;
 
 }
 
 unsigned int worker_current_resume (void) {
 
-	return worker_resume (worker);
+	unsigned int retval = 1;
+
+	if (!worker_resume (worker)) {
+		service_state_update_start_worker ();
+
+		retval = 0;
+	}
+
+	return retval;
 
 }
 
 unsigned int worker_current_stop (void) {
 
-	return worker_stop (worker);
+	unsigned int retval = 1;
+
+	if (!worker_stop (worker)) {
+		service_state_update_stop_worker ();
+
+		retval = 0;
+	}
+
+	return retval;
 
 }
 
@@ -151,6 +210,8 @@ static void worker_handler_method (void *data_ptr) {
 
 	// update complete process times
 	service_data_update_complete_time (complete_time);
+
+	service_data_update_processed_trans_count ();
 
 	// update trans values in db
 	(void) transaction_update_result (trans);
