@@ -150,11 +150,15 @@ static double worker_handler_method_actual_work (
 
 	double start_time = timer_get_current_time ();
 
-	(void) snprintf (
+	hash_input_len = (size_t) snprintf (
 		hash_input, WORKER_HASH_INPUT_SIZE - 1,
 		"%s-%ld",
 		trans->id, trans->date
 	);
+
+	#ifdef SERVICE_DEBUG
+	(void) printf ("Hash input: %s\n", hash_input);
+	#endif
 
 	sha256_generate (trans->result, hash_input, hash_input_len);
 
