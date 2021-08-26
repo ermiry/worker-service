@@ -252,7 +252,7 @@ static void service_trans_parse_json (
 				#endif
 			}
 
-			if (!strcmp (key, "description")) {
+			else if (!strcmp (key, "description")) {
 				*description = json_string_value (value);
 				#ifdef SERVICE_DEBUG
 				(void) printf ("description: \"%s\"\n", *description);
