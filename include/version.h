@@ -1,11 +1,11 @@
-#ifndef _ERMIRY_VERSION_H_
-#define _ERMIRY_VERSION_H_
+#ifndef _SERVICE_VERSION_H_
+#define _SERVICE_VERSION_H_
 
-#define ERMIRY_VERSION			"0.1"
-#define ERMIRY_VERSION_NAME		"Version 0.1"
-#define ERMIRY_VERSION_DATE		"07/08/2021"
-#define ERMIRY_VERSION_TIME		"23:13 CST"
-#define ERMIRY_VERSION_AUTHOR	"Erick Salas"
+#define SERVICE_VERSION			"0.2"
+#define SERVICE_VERSION_NAME	"Version 0.2"
+#define SERVICE_VERSION_DATE	"26/08/2021"
+#define SERVICE_VERSION_TIME	"12:39 CST"
+#define SERVICE_VERSION_AUTHOR	"Erick Salas"
 
 // print full worker version information
 extern void worker_version_print_full (void);

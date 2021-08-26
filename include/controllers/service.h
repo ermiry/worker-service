@@ -1,7 +1,9 @@
-#ifndef _ERMIRY_SERVICE_H_
-#define _ERMIRY_SERVICE_H_
+#ifndef _SERVICE_CONTROLLER_H_
+#define _SERVICE_CONTROLLER_H_
 
 struct _HttpResponse;
+
+extern struct _HttpResponse *missing_values;
 
 extern struct _HttpResponse *worker_works;
 extern struct _HttpResponse *current_version;

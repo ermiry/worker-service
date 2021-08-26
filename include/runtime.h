@@ -1,5 +1,5 @@
-#ifndef _ERMIRY_RUNTIME_H_
-#define _ERMIRY_RUNTIME_H_
+#ifndef _SERVICE_RUNTIME_H_
+#define _SERVICE_RUNTIME_H_
 
 #define RUNTIME_TYPE_MAP(XX)						\
 	XX(0,  NONE,      		Undefined)				\
